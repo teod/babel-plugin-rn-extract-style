@@ -4,7 +4,9 @@ const checkHasStyle = (path) =>
       return n.declarations.some((declaration) => {
         if (declaration.init) {
           if (declaration.init.callee) {
-            return declaration.init.callee.object.name === 'StyleSheet'
+            if (declaration.init.callee.object) {
+              return declaration.init.callee.object.name === 'StyleSheet'
+            }
           }
         }
       })
@@ -38,9 +40,13 @@ module.exports = function (_ref) {
 
             //get the style attribute
             const attributes = path.node.attributes
-            const styleAttribute = attributes.find(
-              ({ name: { name } }) => name === 'style',
-            )
+            const styleAttribute = attributes.find((attribute) => {
+              if (attribute.name) {
+                if (attribute.name.name) {
+                  return attribute.name.name === 'style'
+                }
+              }
+            })
 
             // extract the styles properties
             if (styleAttribute) {
@@ -50,30 +56,30 @@ module.exports = function (_ref) {
                 },
               } = styleAttribute
 
-              const { name: uid } = path.scope.generateUidIdentifier('style')
+              if (Array.isArray(properties)) {
+                const { name: uid } = path.scope.generateUidIdentifier('style')
 
-              const styleName = `${elementName}${uid}`
+                const styleName = `${elementName}${uid}`
 
-              stylesMap[styleName] = properties
+                stylesMap[styleName] = properties
 
-              // update the style attribute
-              path.node.attributes.forEach((attribute, idx) => {
-                const {
-                  name: { name },
-                } = attribute
+                // update the style attribute
+                path.node.attributes.forEach((attribute, idx) => {
+                  const name = attribute.name ? attribute.name.name : ''
 
-                if (name === 'style') {
-                  path.node.attributes[idx] = t.jSXAttribute(
-                    t.jSXIdentifier('style'),
-                    t.jSXExpressionContainer(
-                      t.memberExpression(
-                        t.identifier('styles'),
-                        t.identifier(styleName),
+                  if (name === 'style') {
+                    path.node.attributes[idx] = t.jSXAttribute(
+                      t.jSXIdentifier('style'),
+                      t.jSXExpressionContainer(
+                        t.memberExpression(
+                          t.identifier('styles'),
+                          t.identifier(styleName),
+                        ),
                       ),
-                    ),
-                  )
-                }
-              })
+                    )
+                  }
+                })
+              }
             }
           } catch (err) {
             console.info(err)
@@ -83,19 +89,29 @@ module.exports = function (_ref) {
       VariableDeclarator: {
         enter(path) {
           // enter styles declaration
-          if (path.node.init.callee) {
-            if (path.node.init.callee.object.name === 'StyleSheet') {
-              // add the styles to the StyleSheet object
-              const newStyles = Object.entries(stylesMap).map(
-                ([key, value]) => {
-                  return t.objectProperty(
-                    t.identifier(key),
-                    t.objectExpression(value),
+          if (path.node.init) {
+            if (path.node.init.callee) {
+              if (
+                path.node.init.callee.object &&
+                path.node.init.callee.property
+              ) {
+                if (
+                  path.node.init.callee.object.name === 'StyleSheet' &&
+                  path.node.init.callee.property.name === 'create'
+                ) {
+                  // add the styles to the StyleSheet object
+                  const newStyles = Object.entries(stylesMap).map(
+                    ([key, value]) => {
+                      return t.objectProperty(
+                        t.identifier(key),
+                        t.objectExpression(value),
+                      )
+                    },
                   )
-                },
-              )
 
-              path.node.init.arguments[0].properties.push(...newStyles)
+                  path.node.init.arguments[0].properties.push(...newStyles)
+                }
+              }
             }
           }
         },
