@@ -1,0 +1,18 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Program",
+      "program": "${workspaceRoot}/node_modules/@babel/cli/bin/babel.js ${workspaceRoot}/src -w --verbose --config-file ${workspaceRoot}/babel.config.js",
+      // "program": "npx babel --verbose ./src --out-file res.js",
+      "request": "launch",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "pwa-node"
+    },
+  ]
+}

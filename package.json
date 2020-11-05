@@ -1,0 +1,40 @@
+{
+  "name": "babel-plugin-rn-extract-style",
+  "version": "0.0.1",
+  "description": "Babel plugin for extracting react native inline styles to StyleSheet.create({})",
+  "main": "lib/index.js",
+  "scripts": {
+    "prebuild": "rm -rf lib/",
+    "build": "babel -d lib --ignore \"**/*.test.js\" src",
+    "prepublishOnly": "yarn run build",
+    "test": "npx ava tests/index.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teod/babel-plugin-rn-extract-style.git"
+  },
+  "keywords": [
+    "babel",
+    "plugin",
+    "rn",
+    "react",
+    "native",
+    "style",
+    "styles",
+    "extract",
+    "inline",
+    "stylesheet"
+  ],
+  "author": "Teodor Druta",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/teod/babel-plugin-rn-extract-style/issues"
+  },
+  "homepage": "https://github.com/teod/babel-plugin-rn-extract-style#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.10.1",
+    "@babel/core": "^7.10.2",
+    "@babel/plugin-syntax-jsx": "^7.10.1",
+    "ava": "^3.8.2"
+  }
+}
