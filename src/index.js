@@ -145,6 +145,12 @@ module.exports = function (_ref) {
                     },
                   )
 
+                  if (!path.node.init.arguments[0]) {
+                    // handle StyleSheet.create() without arguments
+                    path.node.init.arguments.push(t.objectExpression([]))
+                  }
+
+                  // push the styles to properties
                   path.node.init.arguments[0].properties.push(...newStyles)
                 }
               }
