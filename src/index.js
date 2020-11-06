@@ -1,3 +1,56 @@
+const handleStyleSheetImport = (t, path) => {
+  let styleSheetFound = false
+  let reactNativeImportIdx = null
+  let styleSheetImportName = 'StyleSheet'
+
+  path.node.body.forEach((n, idx) => {
+    if (n.type === 'ImportDeclaration') {
+      if (n.source.value === 'react-native') {
+        reactNativeImportIdx = idx
+      }
+
+      n.specifiers.forEach((specifier) => {
+        if (specifier.imported && specifier.local) {
+          if (
+            specifier.imported.name === 'StyleSheet' ||
+            specifier.local.name === 'StyleSheet'
+          ) {
+            styleSheetFound = true
+            // get local identifier in case of aliasing
+            styleSheetImportName = specifier.local.name
+          }
+        }
+      })
+    }
+  })
+
+  if (!styleSheetFound) {
+    // react-native import found
+    if (reactNativeImportIdx !== null) {
+      path.node.body[reactNativeImportIdx].specifiers.push(
+        t.importSpecifier(
+          t.identifier('StyleSheet'),
+          t.identifier('StyleSheet'),
+        ),
+      )
+    } else {
+      path.node.body.unshift(
+        t.importDeclaration(
+          [
+            t.importSpecifier(
+              t.identifier('StyleSheet'),
+              t.identifier('StyleSheet'),
+            ),
+          ],
+          t.stringLiteral('react-native'),
+        ),
+      )
+    }
+  }
+
+  return styleSheetImportName
+}
+
 const getStyleVarName = (path) => {
   let styleVarName = ''
 
@@ -20,12 +73,15 @@ const getStyleVarName = (path) => {
   return styleVarName
 }
 
-const createStyleSheet = (path, t) => {
+const createStyleSheet = (path, t, styleSheetImportName = 'StyleSheet') => {
   const styleDeclarator = t.variableDeclaration('const', [
     t.variableDeclarator(
       t.identifier('styles'),
       t.callExpression(
-        t.memberExpression(t.identifier('StyleSheet'), t.identifier('create')),
+        t.memberExpression(
+          t.identifier(styleSheetImportName),
+          t.identifier('create'),
+        ),
         [t.objectExpression([])],
       ),
     ),
@@ -36,7 +92,7 @@ const createStyleSheet = (path, t) => {
 module.exports = function (_ref) {
   const t = _ref.types
 
-  const traverseJSXOpeningElement = (styleVarName) => {
+  const traverseJSXOpeningElement = (styleVarName, styleSheetImportName) => {
     const stylesMap = {}
 
     const addToStylesMap = (path, elementName, properties) => {
@@ -123,37 +179,42 @@ module.exports = function (_ref) {
       },
       VariableDeclarator: {
         enter(path) {
-          // enter styles declaration
-          if (path.node.init) {
-            if (path.node.init.callee) {
-              if (
-                path.node.init.callee.object &&
-                path.node.init.callee.property
-              ) {
+          try {
+            // enter styles declaration
+            if (path.node.init) {
+              if (path.node.init.callee) {
                 if (
-                  path.node.init.callee.object.name === 'StyleSheet' &&
-                  path.node.init.callee.property.name === 'create'
+                  path.node.init.callee.object &&
+                  path.node.init.callee.property
                 ) {
-                  // add the styles to the StyleSheet object
-                  const newStyles = Object.entries(stylesMap).map(
-                    ([key, value]) => {
-                      return t.objectProperty(
-                        t.identifier(key),
-                        t.objectExpression(value),
-                      )
-                    },
-                  )
+                  if (
+                    path.node.init.callee.object.name ===
+                      styleSheetImportName &&
+                    path.node.init.callee.property.name === 'create'
+                  ) {
+                    // add the styles to the StyleSheet object
+                    const newStyles = Object.entries(stylesMap).map(
+                      ([key, value]) => {
+                        return t.objectProperty(
+                          t.identifier(key),
+                          t.objectExpression(value),
+                        )
+                      },
+                    )
 
-                  if (!path.node.init.arguments[0]) {
-                    // handle StyleSheet.create() without arguments
-                    path.node.init.arguments.push(t.objectExpression([]))
+                    if (!path.node.init.arguments[0]) {
+                      // handle StyleSheet.create() without arguments
+                      path.node.init.arguments.push(t.objectExpression([]))
+                    }
+
+                    // push the styles to properties
+                    path.node.init.arguments[0].properties.push(...newStyles)
                   }
-
-                  // push the styles to properties
-                  path.node.init.arguments[0].properties.push(...newStyles)
                 }
               }
             }
+          } catch (err) {
+            console.info(err)
           }
         },
       },
@@ -164,31 +225,42 @@ module.exports = function (_ref) {
     visitor: {
       Program: {
         enter(path) {
-          // check if file has jsx
-          let hasJSX = false
+          try {
+            // check if file has jsx
+            let hasJSX = false
 
-          path.traverse({
-            JSXElement: {
-              enter() {
-                hasJSX = true
+            path.traverse({
+              JSXElement: {
+                enter() {
+                  hasJSX = true
+                },
               },
-            },
-          })
+            })
 
-          if (!hasJSX) {
-            return
+            if (!hasJSX) {
+              return
+            }
+
+            const styleSheetImportName = handleStyleSheetImport(t, path)
+
+            // check if file already has StyleSheet declaration
+            const styleVarName = getStyleVarName(path)
+
+            // create stylesheet object
+            if (!styleVarName) {
+              createStyleSheet(path, t, styleSheetImportName)
+            }
+
+            // traverse and move the inline styles to StyleSheet
+            path.traverse(
+              traverseJSXOpeningElement(
+                styleVarName || 'styles',
+                styleSheetImportName,
+              ),
+            )
+          } catch (err) {
+            console.info(err)
           }
-
-          // check if file already has StyleSheet declaration
-          const styleVarName = getStyleVarName(path)
-
-          // create stylesheet object
-          if (!styleVarName) {
-            createStyleSheet(path, t)
-          }
-
-          // traverse and move the inline styles to StyleSheet
-          path.traverse(traverseJSXOpeningElement(styleVarName || 'styles'))
         },
       },
     },

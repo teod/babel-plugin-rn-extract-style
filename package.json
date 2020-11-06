@@ -1,6 +1,6 @@
 {
   "name": "babel-plugin-rn-extract-style",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Babel plugin for extracting react native inline styles to StyleSheet.create({})",
   "main": "lib/index.js",
   "scripts": {

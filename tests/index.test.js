@@ -11,10 +11,10 @@ const entries = [
 ]
 
 const expected = [
-  "<Text style={styles.Text_style}>Big brown fox</Text>;const styles = StyleSheet.create({ Text_style: { color: 'red' }});",
-  "<Text style={[styles.text, styles.Text_style]}>Big brown fox</Text>;const styles = StyleSheet.create({ text: { fontSize: 20 }, Text_style: { color: 'red' }});",
-  "<Text style={customStyles.Text_style}>Big brown fox</Text>;const customStyles = StyleSheet.create({ Text_style: { color: 'red' }});",
-  "<Text style={styles.Text_style}>Big brown fox</Text>;const styles = StyleSheet.create({ Text_style: { color: 'red' }});",
+  'import { StyleSheet } from "react-native";<Text style={styles.Text_style}>Big brown fox</Text>;const styles = StyleSheet.create({ Text_style: { color: \'red\' }});',
+  'import { StyleSheet } from "react-native";<Text style={[styles.text, styles.Text_style]}>Big brown fox</Text>;const styles = StyleSheet.create({ text: { fontSize: 20 }, Text_style: { color: \'red\' }});',
+  'import { StyleSheet } from "react-native";<Text style={customStyles.Text_style}>Big brown fox</Text>;const customStyles = StyleSheet.create({ Text_style: { color: \'red\' }});',
+  'import { StyleSheet } from "react-native";<Text style={styles.Text_style}>Big brown fox</Text>;const styles = StyleSheet.create({ Text_style: { color: \'red\' }});',
 ]
 
 test('plugin', (t) => {
