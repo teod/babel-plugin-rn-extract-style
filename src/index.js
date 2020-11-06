@@ -1,17 +1,25 @@
-const checkHasStyle = (path) =>
-  path.node.body.some((n) => {
+const getStyleVarName = (path) => {
+  let styleVarName = ''
+
+  path.node.body.forEach((n) => {
     if (n.type === 'VariableDeclaration') {
-      return n.declarations.some((declaration) => {
+      return n.declarations.forEach((declaration) => {
         if (declaration.init) {
           if (declaration.init.callee) {
             if (declaration.init.callee.object) {
-              return declaration.init.callee.object.name === 'StyleSheet'
+              console.log(declaration.id.name)
+              if (declaration.init.callee.object.name === 'StyleSheet') {
+                styleVarName = declaration.id.name
+              }
             }
           }
         }
       })
     }
   })
+
+  return styleVarName
+}
 
 const createStyleSheet = (path, t) => {
   const styleDeclarator = t.variableDeclaration('const', [
@@ -29,7 +37,7 @@ const createStyleSheet = (path, t) => {
 module.exports = function (_ref) {
   const t = _ref.types
 
-  const traverseJSXOpeningElement = () => {
+  const traverseJSXOpeningElement = (styleVarName) => {
     const stylesMap = {}
 
     const addToStylesMap = (path, elementName, properties) => {
@@ -78,7 +86,7 @@ module.exports = function (_ref) {
                   t.jSXIdentifier('style'),
                   t.jSXExpressionContainer(
                     t.memberExpression(
-                      t.identifier('styles'),
+                      t.identifier(styleVarName),
                       t.identifier(styleName),
                     ),
                   ),
@@ -97,7 +105,7 @@ module.exports = function (_ref) {
                       )
 
                       const styleObj = t.memberExpression(
-                        t.identifier('styles'),
+                        t.identifier(styleVarName),
                         t.identifier(styleName),
                       )
 
@@ -167,15 +175,15 @@ module.exports = function (_ref) {
           }
 
           // check if file already has StyleSheet declaration
-          const hasStyle = checkHasStyle(path)
+          const styleVarName = getStyleVarName(path)
 
           // create stylesheet object
-          if (!hasStyle) {
+          if (!styleVarName) {
             createStyleSheet(path, t)
           }
 
           // traverse and move the inline styles to StyleSheet
-          path.traverse(traverseJSXOpeningElement())
+          path.traverse(traverseJSXOpeningElement(styleVarName || 'styles'))
         },
       },
     },
