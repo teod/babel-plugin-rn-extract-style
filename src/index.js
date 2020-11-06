@@ -29,8 +29,18 @@ const createStyleSheet = (path, t) => {
 module.exports = function (_ref) {
   const t = _ref.types
 
-  const traverseJSXOpeningElement = (hasStyle) => {
+  const traverseJSXOpeningElement = () => {
     const stylesMap = {}
+
+    const addToStylesMap = (path, elementName, properties) => {
+      const { name: uid } = path.scope.generateUidIdentifier('style')
+
+      const styleName = `${elementName}${uid}`
+
+      stylesMap[styleName] = properties
+
+      return styleName
+    }
 
     return {
       JSXOpeningElement: {
@@ -40,10 +50,14 @@ module.exports = function (_ref) {
 
             //get the style attribute
             const attributes = path.node.attributes
-            const styleAttribute = attributes.find((attribute) => {
+            let styleAttributeIdx = 0
+            const styleAttribute = attributes.find((attribute, idx) => {
               if (attribute.name) {
                 if (attribute.name.name) {
-                  return attribute.name.name === 'style'
+                  if (attribute.name.name === 'style') {
+                    styleAttributeIdx = idx
+                    return true
+                  }
                 }
               }
             })
@@ -52,31 +66,45 @@ module.exports = function (_ref) {
             if (styleAttribute) {
               const {
                 value: {
-                  expression: { properties },
+                  expression: { properties, elements },
                 },
               } = styleAttribute
 
               if (Array.isArray(properties)) {
-                const { name: uid } = path.scope.generateUidIdentifier('style')
-
-                const styleName = `${elementName}${uid}`
-
-                stylesMap[styleName] = properties
+                const styleName = addToStylesMap(path, elementName, properties)
 
                 // update the style attribute
-                path.node.attributes.forEach((attribute, idx) => {
-                  const name = attribute.name ? attribute.name.name : ''
+                path.node.attributes[styleAttributeIdx] = t.jSXAttribute(
+                  t.jSXIdentifier('style'),
+                  t.jSXExpressionContainer(
+                    t.memberExpression(
+                      t.identifier('styles'),
+                      t.identifier(styleName),
+                    ),
+                  ),
+                )
+              }
 
-                  if (name === 'style') {
-                    path.node.attributes[idx] = t.jSXAttribute(
-                      t.jSXIdentifier('style'),
-                      t.jSXExpressionContainer(
-                        t.memberExpression(
-                          t.identifier('styles'),
-                          t.identifier(styleName),
-                        ),
-                      ),
-                    )
+              // handle the case when style is an array of styles
+              if (Array.isArray(elements)) {
+                elements.forEach((node, idx) => {
+                  if (node.type === 'ObjectExpression') {
+                    if (Array.isArray(node.properties)) {
+                      const styleName = addToStylesMap(
+                        path,
+                        elementName,
+                        node.properties,
+                      )
+
+                      const styleObj = t.memberExpression(
+                        t.identifier('styles'),
+                        t.identifier(styleName),
+                      )
+
+                      path.node.attributes[
+                        styleAttributeIdx
+                      ].value.expression.elements[idx] = styleObj
+                    }
                   }
                 })
               }
@@ -123,6 +151,21 @@ module.exports = function (_ref) {
     visitor: {
       Program: {
         enter(path) {
+          // check if file has jsx
+          let hasJSX = false
+
+          path.traverse({
+            JSXElement: {
+              enter() {
+                hasJSX = true
+              },
+            },
+          })
+
+          if (!hasJSX) {
+            return
+          }
+
           // check if file already has StyleSheet declaration
           const hasStyle = checkHasStyle(path)
 
@@ -132,7 +175,7 @@ module.exports = function (_ref) {
           }
 
           // traverse and move the inline styles to StyleSheet
-          path.traverse(traverseJSXOpeningElement(hasStyle))
+          path.traverse(traverseJSXOpeningElement())
         },
       },
     },
