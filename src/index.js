@@ -7,7 +7,6 @@ const getStyleVarName = (path) => {
         if (declaration.init) {
           if (declaration.init.callee) {
             if (declaration.init.callee.object) {
-              console.log(declaration.id.name)
               if (declaration.init.callee.object.name === 'StyleSheet') {
                 styleVarName = declaration.id.name
               }
