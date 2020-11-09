@@ -40,6 +40,24 @@ module.exports = {
 }
 ```
 
+### Include `node_modules`
+
+By default files from the `node_module` are ignored if, you wish to include those you have to specify the `includeNodeModules: true` option:
+
+<b>babel.config.js</b>
+```js
+module.exports = {
+  plugins: [
+    [
+      './plugin.js',
+      {
+        includeNodeModules: true,
+      },
+    ],
+  ]
+}
+```
+
 ## How it works
 
 The plugin parses the contents of each JSX Element and extract the inline styles, generates an uniquie uid for it and appends it to the `StyleSheet.create` object found in the file. In case of a missing `StyleSheet.create` instance it generates a new one.
