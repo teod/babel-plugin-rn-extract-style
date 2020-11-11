@@ -64,36 +64,41 @@ The plugin parses the contents of each JSX Element and extract the inline styles
 
 <b>in:</b>
 ```javascript
-const MyComp = () => (
+const Component = () => (
   <View
     style={{
       height: 500,
       width: '100%',
       backgroundColor: '#6c5b7b',
     }}>
-    <Text style={[{ color: '#f8b195' }]}>My little react component</Text>
+    <View style={{ height: 200 }}>
+      <Text style={{ fontSize: 12 }}>Lorem ipsum</Text>
+    </View>
   </View>
 )
-
-const styles = StyleSheet.create({})
 ```
 <b>out:</b>
 ```javascript
-const MyComp = () => (
+const Component = () => (
   <View
-    style={styles.View_style}>
-    <Text style={styles.Text_style1}>My little react component</Text>
+    style={babelGeneratedStyles.View_style}>
+    <View style={babelGeneratedStyles.View_style1}>
+      <Text style={babelGeneratedStyles.Text_style2}>Lorem ipsum</Text>
+    </View>
   </View>
 )
 
-const styles = StyleSheet.create({
+const babelGeneratedStyles = StyleSheet.create({
   View_style: {
     height: 500,
     width: '100%',
     backgroundColor: '#6c5b7b',
   },
+  View_style1: {
+    height: 200,
+  },
   Text_style1: {
-    color: '#f8b195',
+    fontSize: 12,
   },
 })
 ```
